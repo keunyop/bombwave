@@ -259,12 +259,6 @@
               <option value="hard">어려움</option>
             </select>
           </div>
-          <div class="group">
-            <label style="display:flex; align-items:center; gap:8px;">
-              <input id="debugBossWave1" type="checkbox" />
-              <span>디버그: 1웨이브 보스</span>
-            </label>
-          </div>
         <div class="group">
             <label style="display:flex; align-items:center; gap:8px;">
               <input id="bgmToggle" type="checkbox" checked />
@@ -383,7 +377,6 @@
   const shapeSelect = document.getElementById("playerShape");
   const playerNameInput = document.getElementById("playerNameInput");
   const difficultySelect = document.getElementById("difficultySelect");
-  const debugBossWave1El = document.getElementById("debugBossWave1");
   let nextRunTutorial = false;
 
     // ===== Audio (8-bit BGM) =====
@@ -967,7 +960,6 @@
   }
 
   function isBossWave(w) {
-    if (debugBossWave1El?.checked && w === 1) return true;
     return w >= BOSS_EVERY && (w % BOSS_EVERY === 0);
   }
 
