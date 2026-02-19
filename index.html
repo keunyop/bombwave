@@ -238,12 +238,6 @@
         <!-- 시작 전에 캐릭터 설정(색 + 모양) -->
         <div class="settings" title="게임 시작 전에 캐릭터 색과 모양을 고르세요">
           <div class="group">
-            <label for="playerColor">색</label>
-            <input id="playerColor" type="color" />
-            <div class="swatches" id="swatches"></div>
-          </div>
-
-          <div class="group">
             <label for="playerShape">모양</label>
             <select id="playerShape">
               <option value="circle">원</option>
@@ -281,6 +275,11 @@
           <p>캐릭터 색/모양을 고른 뒤 시작하세요.</p>
           <p>별을 모으고 폭탄을 피하면 점수가 올라갑니다.</p>
           <div class="daily-card">오늘의 데일리 목표: Wave <b id="startDailyGoal">-</b></div>
+          <div class="group" style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <label for="playerColor">색</label>
+            <input id="playerColor" type="color" />
+            <div class="swatches" id="swatches"></div>
+          </div>
           <div class="group" style="display:flex; justify-content:center; align-items:center; gap:10px; margin-top:10px;">
             <label for="playerNameInput">이름</label>
             <input id="playerNameInput" type="text" maxlength="14" placeholder="이름 입력" />
@@ -2353,6 +2352,27 @@
 
   function drawItemSprite(x, y, size, type) {
     const r = size * 0.5;
+    const itemShape = (() => {
+      const map = {
+        emp: "bolt",
+        empPlus: "bolt",
+        shield: "shield",
+        shieldPlus: "shield",
+        chrono: "clock",
+        chronoPlus: "clock",
+        magnet: "magnet",
+        magnetPlus: "magnet",
+        blast: "burst",
+        blastPlus: "burst",
+        bossNuke: "burst",
+        guardLong: "shield",
+        starVacuum: "magnet",
+      };
+      if (map[type]) return map[type];
+      const recipe = FUSION_RECIPES[type];
+      if (recipe && recipe.length) return map[recipe[0]] || "diamond";
+      return "diamond";
+    })();
     const colorMap = {
       emp: "#f3f65b",
       empPlus: "#f3f65b",
@@ -2395,13 +2415,73 @@
     ctx.stroke();
 
     ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.beginPath();
-    ctx.moveTo(0, -r * 0.52);
-    ctx.lineTo(r * 0.4, 0);
-    ctx.lineTo(0, r * 0.52);
-    ctx.lineTo(-r * 0.4, 0);
-    ctx.closePath();
-    ctx.fill();
+    if (itemShape === "bolt") {
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.12, -r * 0.54);
+      ctx.lineTo(r * 0.12, -r * 0.14);
+      ctx.lineTo(-r * 0.02, -r * 0.14);
+      ctx.lineTo(r * 0.14, r * 0.46);
+      ctx.lineTo(-r * 0.14, r * 0.06);
+      ctx.lineTo(r * 0.02, r * 0.06);
+      ctx.closePath();
+      ctx.fill();
+    } else if (itemShape === "shield") {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.56);
+      ctx.lineTo(r * 0.36, -r * 0.30);
+      ctx.lineTo(r * 0.32, r * 0.20);
+      ctx.lineTo(0, r * 0.54);
+      ctx.lineTo(-r * 0.32, r * 0.20);
+      ctx.lineTo(-r * 0.36, -r * 0.30);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(25,55,90,0.35)";
+      ctx.lineWidth = Math.max(1.0, size * 0.04);
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.46);
+      ctx.lineTo(0, r * 0.36);
+      ctx.stroke();
+    } else if (itemShape === "clock") {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(25,55,90,0.45)";
+      ctx.lineWidth = Math.max(1.0, size * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -r * 0.22);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(r * 0.18, 0);
+      ctx.stroke();
+    } else if (itemShape === "magnet") {
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.40, Math.PI * 0.20, Math.PI * 0.80, true);
+      ctx.lineTo(-r * 0.26, r * 0.34);
+      ctx.arc(0, 0, r * 0.30, Math.PI * 0.82, Math.PI * 0.18, false);
+      ctx.lineTo(r * 0.26, -r * 0.34);
+      ctx.closePath();
+      ctx.fill();
+    } else if (itemShape === "burst") {
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (Math.PI * 2 * i) / 8 - Math.PI / 2;
+        const rr = i % 2 === 0 ? r * 0.5 : r * 0.24;
+        const px = Math.cos(a) * rr;
+        const py = Math.sin(a) * rr;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.52);
+      ctx.lineTo(r * 0.4, 0);
+      ctx.lineTo(0, r * 0.52);
+      ctx.lineTo(-r * 0.4, 0);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.restore();
   }
@@ -2616,31 +2696,6 @@
       ctx.save();
       ctx.fillStyle = "rgba(120,180,255,0.08)";
       ctx.fillRect(0, 0, w, h);
-      ctx.restore();
-    }
-
-    if (state.pointer.active && state.pointer.type === "touch") {
-      const baseX = state.pointer.startX;
-      const baseY = state.pointer.startY;
-      const joyR = Math.max(36, 52 * SCALE);
-      const dx = state.pointer.x - baseX;
-      const dy = state.pointer.y - baseY;
-      const dist = Math.hypot(dx, dy) || 1;
-      const knobDist = Math.min(dist, joyR);
-      const knobX = baseX + (dx / dist) * knobDist;
-      const knobY = baseY + (dy / dist) * knobDist;
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.38)";
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(baseX, baseY, joyR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "rgba(140,220,255,0.36)";
-      ctx.beginPath();
-      ctx.arc(knobX, knobY, joyR * 0.42, 0, Math.PI * 2);
-      ctx.fill();
       ctx.restore();
     }
 
