@@ -1747,7 +1747,7 @@
     itemSpawnCd: ITEM_FORCE_SPAWN_SEC,
     keys: new Set(),
 
-    pointer: { active:false, x:0, y:0 },
+    pointer: { active:false, id:null, type:"mouse", x:0, y:0, startX:0, startY:0 },
     lastTouchTapAt: 0,
     lastTouchTapX: 0,
     lastTouchTapY: 0,
@@ -1800,6 +1800,10 @@
     state.itemSpawnCd = ITEM_FORCE_SPAWN_SEC;
     state.keys.clear();
     state.pointer.active = false;
+    state.pointer.id = null;
+    state.pointer.type = "mouse";
+    state.pointer.startX = 0;
+    state.pointer.startY = 0;
     state.lastTouchTapAt = 0;
     state.lastTouchTapX = 0;
     state.lastTouchTapY = 0;
@@ -1926,14 +1930,27 @@
     let mvx = (right ? 1 : 0) - (left ? 1 : 0);
     let mvy = (down ? 1 : 0) - (up ? 1 : 0);
 
-    // Mobile / pointer control: drag/tap to move toward finger
+    // Mobile / pointer control
     if (mvx === 0 && mvy === 0 && state.pointer.active) {
-      const dx = state.pointer.x - player.x;
-      const dy = state.pointer.y - player.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist > 2) {
-        mvx = dx / dist;
-        mvy = dy / dist;
+      if (state.pointer.type === "touch") {
+        // Virtual joystick: touch start point is the stick center.
+        const dx = state.pointer.x - state.pointer.startX;
+        const dy = state.pointer.y - state.pointer.startY;
+        const dist = Math.hypot(dx, dy);
+        const deadZone = 8 * SCALE;
+        if (dist > deadZone) {
+          mvx = dx / dist;
+          mvy = dy / dist;
+        }
+      } else {
+        // Mouse/pointer keep direct-follow behavior.
+        const dx = state.pointer.x - player.x;
+        const dy = state.pointer.y - player.y;
+        const dist = Math.hypot(dx, dy);
+        if (dist > 2) {
+          mvx = dx / dist;
+          mvy = dy / dist;
+        }
       }
     }
 
@@ -2334,6 +2351,61 @@
     ctx.restore();
   }
 
+  function drawItemSprite(x, y, size, type) {
+    const r = size * 0.5;
+    const colorMap = {
+      emp: "#f3f65b",
+      empPlus: "#f3f65b",
+      empMagnet: "#f3f65b",
+      empChrono: "#f3f65b",
+      shield: "#6ed6ff",
+      shieldPlus: "#6ed6ff",
+      guardLong: "#6ed6ff",
+      blastShield: "#6ed6ff",
+      chrono: "#c6b2ff",
+      chronoPlus: "#c6b2ff",
+      chronoBlast: "#c6b2ff",
+      chronoMagnet: "#c6b2ff",
+      magnet: "#7df0be",
+      magnetPlus: "#7df0be",
+      starVacuum: "#7df0be",
+      blast: "#ff8d68",
+      blastPlus: "#ff8d68",
+      bossNuke: "#ff5d6b",
+      jackpot: "#88efff",
+    };
+    const c = colorMap[type] || "#ffd16f";
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    const g = ctx.createRadialGradient(-r * 0.25, -r * 0.25, r * 0.12, 0, 0, r);
+    g.addColorStop(0, "#ffffff");
+    g.addColorStop(0.45, c);
+    g.addColorStop(1, "rgba(0,0,0,0.35)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = Math.max(1.4, size * 0.10);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.78, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.52);
+    ctx.lineTo(r * 0.4, 0);
+    ctx.lineTo(0, r * 0.52);
+    ctx.lineTo(-r * 0.4, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
   function drawPlayer() {
     ctx.save();
     ctx.translate(player.x, player.y);
@@ -2392,24 +2464,48 @@
 
     ctx.save();
     ctx.translate(boss.x, boss.y);
+    const r = boss.r * 0.95;
 
-    ctx.font = `${Math.round(44 * SCALE)}px system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("👾", 0, 0);
+    const core = ctx.createRadialGradient(-r * 0.35, -r * 0.42, r * 0.14, 0, 0, r * 1.02);
+    core.addColorStop(0, "#ffd8f2");
+    core.addColorStop(0.45, "#cf6dff");
+    core.addColorStop(1, "#5c2892");
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.beginPath();
+    ctx.arc(-r * 0.26, -r * 0.12, r * 0.16, 0, Math.PI * 2);
+    ctx.arc(r * 0.26, -r * 0.12, r * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#12233f";
+    ctx.beginPath();
+    ctx.arc(-r * 0.26, -r * 0.12, r * 0.07, 0, Math.PI * 2);
+    ctx.arc(r * 0.26, -r * 0.12, r * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = Math.max(1.4, r * 0.09);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.3, r * 0.26);
+    ctx.lineTo(0, r * 0.38);
+    ctx.lineTo(r * 0.3, r * 0.26);
+    ctx.stroke();
 
     // small ring
     ctx.strokeStyle = "rgba(255,255,255,0.25)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(0, 0, boss.r * 0.95, 0, Math.PI * 2);
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
     ctx.stroke();
 
     if ((boss.hitFlash || 0) > 0) {
       const a = Math.min(0.75, boss.hitFlash / 0.12);
       ctx.fillStyle = `rgba(255, 40, 40, ${a * 0.55})`;
       ctx.beginPath();
-      ctx.arc(0, 0, boss.r * 0.95, 0, Math.PI * 2);
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -2470,14 +2566,7 @@
       if (it.type === "jackpot") {
         drawFusionItemSprite(ix, iy, 23 * SCALE);
       } else {
-        const icon = ITEM_DEFS[it.type]?.icon || "⚡";
-        ctx.save();
-        ctx.translate(ix, iy);
-        ctx.font = `${Math.round(20 * SCALE)}px system-ui`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(icon, 0, 0);
-        ctx.restore();
+        drawItemSprite(ix, iy, 23 * SCALE, it.type);
       }
     }
 
@@ -2527,6 +2616,31 @@
       ctx.save();
       ctx.fillStyle = "rgba(120,180,255,0.08)";
       ctx.fillRect(0, 0, w, h);
+      ctx.restore();
+    }
+
+    if (state.pointer.active && state.pointer.type === "touch") {
+      const baseX = state.pointer.startX;
+      const baseY = state.pointer.startY;
+      const joyR = Math.max(36, 52 * SCALE);
+      const dx = state.pointer.x - baseX;
+      const dy = state.pointer.y - baseY;
+      const dist = Math.hypot(dx, dy) || 1;
+      const knobDist = Math.min(dist, joyR);
+      const knobX = baseX + (dx / dist) * knobDist;
+      const knobY = baseY + (dy / dist) * knobDist;
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.38)";
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(baseX, baseY, joyR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(140,220,255,0.36)";
+      ctx.beginPath();
+      ctx.arc(knobX, knobY, joyR * 0.42, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
@@ -2618,10 +2732,15 @@
   }
 
   function onPointerDown(ev) {
+    if (state.pointer.active && state.pointer.id !== null && ev.pointerId !== state.pointer.id) return;
     const p = eventToCanvasPos(ev);
     state.pointer.active = true;
+    state.pointer.id = ev.pointerId;
+    state.pointer.type = ev.pointerType || "mouse";
     state.pointer.x = p.x;
     state.pointer.y = p.y;
+    state.pointer.startX = p.x;
+    state.pointer.startY = p.y;
 
     if (ev.pointerType === "touch" && state.running && !state.paused && state.heldSkill) {
       const nowMs = performance.now();
@@ -2640,19 +2759,21 @@
     }
   }
   function onPointerMove(ev) {
-    if (!state.pointer.active) return;
+    if (!state.pointer.active || ev.pointerId !== state.pointer.id) return;
     const p = eventToCanvasPos(ev);
     state.pointer.x = p.x;
     state.pointer.y = p.y;
   }
-  function onPointerUp() {
+  function onPointerUp(ev) {
+    if (!state.pointer.active || (ev && ev.pointerId !== state.pointer.id)) return;
     state.pointer.active = false;
+    state.pointer.id = null;
   }
 
   canvas.addEventListener("pointerdown", (ev) => { ev.preventDefault(); canvas.setPointerCapture(ev.pointerId); onPointerDown(ev); });
   canvas.addEventListener("pointermove", (ev) => { ev.preventDefault(); onPointerMove(ev); });
-  canvas.addEventListener("pointerup",   (ev) => { ev.preventDefault(); onPointerUp(); });
-  canvas.addEventListener("pointercancel", (ev) => { ev.preventDefault(); onPointerUp(); });
+  canvas.addEventListener("pointerup",   (ev) => { ev.preventDefault(); onPointerUp(ev); });
+  canvas.addEventListener("pointercancel", (ev) => { ev.preventDefault(); onPointerUp(ev); });
 
   btnStart.addEventListener("click", async () => {
     await enterFullscreenIfPossible();
