@@ -1746,7 +1746,7 @@
     itemSpawnCd: ITEM_FORCE_SPAWN_SEC,
     keys: new Set(),
 
-    pointer: { active:false, id:null, type:"mouse", x:0, y:0, startX:0, startY:0 },
+    pointer: { active:false, id:null, type:"mouse", x:0, y:0, startX:0, startY:0, shipStartX:0, shipStartY:0 },
     lastTouchTapAt: 0,
     lastTouchTapX: 0,
     lastTouchTapY: 0,
@@ -1803,6 +1803,8 @@
     state.pointer.type = "mouse";
     state.pointer.startX = 0;
     state.pointer.startY = 0;
+    state.pointer.shipStartX = 0;
+    state.pointer.shipStartY = 0;
     state.lastTouchTapAt = 0;
     state.lastTouchTapX = 0;
     state.lastTouchTapY = 0;
@@ -1928,18 +1930,30 @@
 
     let mvx = (right ? 1 : 0) - (left ? 1 : 0);
     let mvy = (down ? 1 : 0) - (up ? 1 : 0);
+    let moveScale = 1;
 
     // Mobile / pointer control
     if (mvx === 0 && mvy === 0 && state.pointer.active) {
       if (state.pointer.type === "touch") {
-        // Virtual joystick: touch start point is the stick center.
-        const dx = state.pointer.x - state.pointer.startX;
-        const dy = state.pointer.y - state.pointer.startY;
+        // Relative drag: ship follows finger delta from touch start.
+        const targetX = clamp(
+          state.pointer.shipStartX + (state.pointer.x - state.pointer.startX),
+          player.r,
+          W() - player.r
+        );
+        const targetY = clamp(
+          state.pointer.shipStartY + (state.pointer.y - state.pointer.startY),
+          player.r,
+          H() - player.r
+        );
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
         const dist = Math.hypot(dx, dy);
-        const deadZone = 8 * SCALE;
+        const deadZone = 1.2 * SCALE;
         if (dist > deadZone) {
           mvx = dx / dist;
           mvy = dy / dist;
+          moveScale = Math.min(1, dist / (32 * SCALE));
         }
       } else {
         // Mouse/pointer keep direct-follow behavior.
@@ -1964,8 +1978,8 @@
       }
     }
 
-    player.x += mvx * player.speed * dt;
-    player.y += mvy * player.speed * dt;
+    player.x += mvx * player.speed * moveScale * dt;
+    player.y += mvy * player.speed * moveScale * dt;
     player.x = clamp(player.x, player.r, W() - player.r);
     player.y = clamp(player.y, player.r, H() - player.r);
     grantLeeJaeyeonBonusIfNeeded();
@@ -2796,6 +2810,8 @@
     state.pointer.y = p.y;
     state.pointer.startX = p.x;
     state.pointer.startY = p.y;
+    state.pointer.shipStartX = player.x;
+    state.pointer.shipStartY = player.y;
 
     if (ev.pointerType === "touch" && state.running && !state.paused && state.heldSkill) {
       const nowMs = performance.now();
