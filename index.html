@@ -1935,14 +1935,17 @@
     // Mobile / pointer control
     if (mvx === 0 && mvy === 0 && state.pointer.active) {
       if (state.pointer.type === "touch") {
-        const joy = touchJoystickSpec();
-        const dx = state.pointer.x - joy.x;
-        const dy = state.pointer.y - joy.y;
+        const touchAimYOffset = Math.max(52, 82 * SCALE);
+        const targetX = clamp(state.pointer.x, player.r, W() - player.r);
+        const targetY = clamp(state.pointer.y - touchAimYOffset, player.r, H() - player.r);
+        const dx = targetX - player.x;
+        const dy = targetY - player.y;
         const dist = Math.hypot(dx, dy);
-        if (dist > joy.deadZone) {
+        const deadZone = 2 * SCALE;
+        if (dist > deadZone) {
           mvx = dx / dist;
           mvy = dy / dist;
-          moveScale = Math.min(1, (dist - joy.deadZone) / Math.max(1, joy.r - joy.deadZone));
+          moveScale = Math.min(1, dist / (42 * SCALE));
         }
       } else {
         // Mouse/pointer keep direct-follow behavior.
@@ -2702,30 +2705,6 @@
       ctx.restore();
     }
 
-    if (isMobileViewport()) {
-      const joy = touchJoystickSpec();
-      const dx = state.pointer.active && state.pointer.type === "touch" ? (state.pointer.x - joy.x) : 0;
-      const dy = state.pointer.active && state.pointer.type === "touch" ? (state.pointer.y - joy.y) : 0;
-      const dist = Math.hypot(dx, dy) || 1;
-      const knobDist = Math.min(dist, joy.r);
-      const knobX = joy.x + (dx / dist) * knobDist;
-      const knobY = joy.y + (dy / dist) * knobDist;
-
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,255,255,0.30)";
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(joy.x, joy.y, joy.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "rgba(145,220,255,0.34)";
-      ctx.beginPath();
-      ctx.arc(knobX, knobY, joy.knobR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-
     // warning banner (boss incoming)
     if (fx.warnLeft > 0 && fx.warnWave) {
       const t = fx.warnLeft / WARN_LEAD;
@@ -2803,23 +2782,6 @@
   });
 
   // Pointer / Touch (mobile friendly)
-  function isMobileViewport() {
-    return window.innerWidth <= 900 || window.innerHeight <= 520;
-  }
-
-  function touchJoystickSpec() {
-    const r = Math.max(38, 52 * SCALE);
-    const margin = Math.max(12, 18 * SCALE);
-    return {
-      x: W() - r - margin,
-      y: H() - r - margin,
-      r,
-      knobR: r * 0.42,
-      deadZone: r * 0.16,
-      activateR: r * 1.9,
-    };
-  }
-
   function eventToCanvasPos(ev) {
     const rect = canvas.getBoundingClientRect();
     const x = (ev.clientX - rect.left);
@@ -2850,14 +2812,6 @@
       }
     }
 
-    if (ev.pointerType === "touch" && isMobileViewport()) {
-      const joy = touchJoystickSpec();
-      const jdx = p.x - joy.x;
-      const jdy = p.y - joy.y;
-      const inJoystickArea = (jdx * jdx + jdy * jdy) <= (joy.activateR * joy.activateR);
-      if (!inJoystickArea) return;
-    }
-
     state.pointer.active = true;
     state.pointer.id = ev.pointerId;
     state.pointer.type = ev.pointerType || "mouse";
@@ -2867,7 +2821,6 @@
     state.pointer.startY = p.y;
     state.pointer.shipStartX = player.x;
     state.pointer.shipStartY = player.y;
-    return true;
   }
   function onPointerMove(ev) {
     if (!state.pointer.active || ev.pointerId !== state.pointer.id) return;
@@ -2881,11 +2834,7 @@
     state.pointer.id = null;
   }
 
-  canvas.addEventListener("pointerdown", (ev) => {
-    ev.preventDefault();
-    const accepted = onPointerDown(ev);
-    if (accepted) canvas.setPointerCapture(ev.pointerId);
-  });
+  canvas.addEventListener("pointerdown", (ev) => { ev.preventDefault(); canvas.setPointerCapture(ev.pointerId); onPointerDown(ev); });
   canvas.addEventListener("pointermove", (ev) => { ev.preventDefault(); onPointerMove(ev); });
   canvas.addEventListener("pointerup",   (ev) => { ev.preventDefault(); onPointerUp(ev); });
   canvas.addEventListener("pointercancel", (ev) => { ev.preventDefault(); onPointerUp(ev); });
