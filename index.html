@@ -1254,9 +1254,12 @@
       const dist = Math.hypot(dx, dy) || 1;
       if (dist > radius) continue;
       const k = 1 - (dist / radius);
-      const boost = power * (0.35 + k);
-      b.vx += (dx / dist) * boost;
-      b.vy += (dy / dist) * boost;
+      const speed = Math.hypot(b.vx, b.vy) || b.baseSpeed || (120 * SCALE);
+      const awayVx = (dx / dist) * speed;
+      const awayVy = (dy / dist) * speed;
+      const steer = Math.min(1, 0.35 + k * 0.45);
+      b.vx += (awayVx - b.vx) * steer;
+      b.vy += (awayVy - b.vy) * steer;
     }
 
     if (bossState.active && bossState.boss) {
@@ -2918,6 +2921,7 @@
 </script>
 </body>
 </html>
+
 
 
 
