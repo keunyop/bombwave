@@ -1945,7 +1945,7 @@
         if (dist > deadZone) {
           mvx = dx / dist;
           mvy = dy / dist;
-          moveScale = Math.min(1, dist / (42 * SCALE));
+          moveScale = 1;
         }
       } else {
         // Mouse/pointer keep direct-follow behavior.
@@ -2918,6 +2918,7 @@
 </script>
 </body>
 </html>
+
 
 
 
